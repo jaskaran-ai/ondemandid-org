@@ -63,8 +63,8 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 | Variable             | Required    | Description                           |
 | -------------------- | ----------- | ------------------------------------- |
-| `DB_TYPE`            | Yes         | `postgres` or `sqlite`                |
-| `DATABASE_URL`       | If postgres | PostgreSQL connection string          |
+| `DB_TYPE`            | Yes         | `postgres` (Supabase) or `sqlite`     |
+| `DATABASE_URL`       | If postgres | Supabase transaction pooler URI       |
 | `SQLITE_DB_PATH`     | If sqlite   | SQLite file path (e.g., `./local.db`) |
 | `DEMO_MODE`          | No          | `true` to enable simulation mode      |
 | `IVALT_API_KEY`      | No\*        | iVALT API authentication              |

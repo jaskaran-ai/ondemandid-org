@@ -9,7 +9,7 @@ iVALT OnDemand ID is a Next.js 16 enterprise SaaS application for password-free 
 - Customer signup with trial provisioning
 - On-demand biometric identity verification
 - Real-time status polling for verification flows
-- Dual database support (PostgreSQL via Neon / SQLite)
+- Dual database support (PostgreSQL via Supabase / SQLite)
 - Email notifications via AWS SES or SMTP fallback
 - Demo mode toggle for safe development
 
@@ -206,7 +206,7 @@ Required variables (see `.env.example` for full list):
 
 | Variable             | Purpose                          |
 | -------------------- | -------------------------------- |
-| `DB_TYPE`            | `postgres` or `sqlite`           |
+| `DB_TYPE`            | `postgres` (Supabase) or `sqlite` |
 | `DATABASE_URL`       | PostgreSQL connection string     |
 | `SQLITE_DB_PATH`     | SQLite file path                 |
 | `DEMO_MODE`          | `true` to enable simulation mode |
@@ -256,7 +256,7 @@ When `DEMO_MODE=true`:
 
 ### Database
 
-- **PostgreSQL**: For production (Neon recommended)
+- **PostgreSQL**: For production (Supabase) — see `docs/SUPABASE.md`
 - **SQLite**: For local development
 - Switch via `DB_TYPE` env var
 - Drizzle Kit commands: `db:push`, `db:studio`, `db:generate`
