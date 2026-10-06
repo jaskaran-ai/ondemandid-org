@@ -3,8 +3,7 @@ import { z } from 'zod';
 import { checkRateLimit } from '@/lib/security';
 import { triggerAuthRequest } from '@/lib/ivalt';
 import {
-  ADMIN_COUNTRY_CODE,
-  ADMIN_MOBILE,
+  isAuthorizedAdminMobile,
   ADMIN_ID_CONNECTION,
 } from '@/lib/admin/auth';
 
@@ -70,8 +69,7 @@ export async function POST(request: Request) {
 
     const { countryCode, mobile } = parsed.data;
 
-    // Verify the mobile number matches the authorized admin
-    if (countryCode !== ADMIN_COUNTRY_CODE || mobile !== ADMIN_MOBILE) {
+    if (!isAuthorizedAdminMobile(countryCode, mobile)) {
       return NextResponse.json(
         { error: 'This mobile number is not authorized for admin access.' },
         { status: 403 }

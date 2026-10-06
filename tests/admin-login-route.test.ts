@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 process.env.DEMO_MODE = 'true';
+process.env.AUTHORIZED_ADMIN_NUMBERS =
+  '+91:9530654704,+91:6283974746';
 
 import { POST } from '@/app/api/admin/login/route';
 import { loginAttempts } from '@/app/api/admin/login/route';
@@ -47,5 +49,16 @@ describe('POST /api/admin/login', () => {
     expect(body.ok).toBe(true);
     expect(body.requestId).toBeDefined();
     expect(body.message).toContain('Biometric authentication request sent');
+  });
+
+  it('returns 200 for second authorized admin mobile', async () => {
+    const res = await post({
+      countryCode: '+91',
+      mobile: '6283974746',
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.ok).toBe(true);
+    expect(body.requestId).toBeDefined();
   });
 });

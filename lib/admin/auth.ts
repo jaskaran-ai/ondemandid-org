@@ -1,11 +1,24 @@
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import {
+  getAuthorizedAdminNumbers,
+  type AuthorizedAdmin,
+} from './authorized-admins';
 
-// --- Admin configuration ---
+export type { AuthorizedAdmin };
 
-export const ADMIN_COUNTRY_CODE = '+91';
-export const ADMIN_MOBILE = '9530654704';
-export const ADMIN_FULL_NUMBER = `${ADMIN_COUNTRY_CODE}${ADMIN_MOBILE}`;
+export function isAuthorizedAdminMobile(
+  countryCode: string,
+  mobile: string
+): boolean {
+  return getAuthorizedAdminNumbers().some(
+    admin => admin.countryCode === countryCode && admin.mobile === mobile
+  );
+}
+
+function isAuthorizedAdminMobileInToken(mobile: string): boolean {
+  return getAuthorizedAdminNumbers().some(admin => admin.mobile === mobile);
+}
 
 // iVALT idConnection for the admin account.
 // Set ADMIN_IVALT_ID_CONNECTION in .env for production.
@@ -29,10 +42,14 @@ function getSigningKey(): string {
  * Create an HMAC-signed session token.
  * Payload: { sub: "admin", mobile, exp }
  */
-export function createSessionToken(): string {
+export function createSessionToken(mobile: string): string {
+  if (!isAuthorizedAdminMobileInToken(mobile)) {
+    throw new Error('Mobile number is not authorized for admin session');
+  }
+
   const payload = {
     sub: 'admin',
-    mobile: ADMIN_MOBILE,
+    mobile,
     jti: crypto.randomBytes(16).toString('hex'), // random nonce guarantees uniqueness
     exp: Math.floor(Date.now() / 1000) + SESSION_MAX_AGE,
   };
@@ -76,7 +93,11 @@ export function verifySessionToken(token: string | undefined): boolean {
     const payload = JSON.parse(
       Buffer.from(data, 'base64url').toString('utf-8')
     );
-    if (payload.sub !== 'admin' || payload.mobile !== ADMIN_MOBILE) {
+    if (
+      payload.sub !== 'admin' ||
+      typeof payload.mobile !== 'string' ||
+      !isAuthorizedAdminMobileInToken(payload.mobile)
+    ) {
       return false;
     }
     if (payload.exp && Math.floor(Date.now() / 1000) > payload.exp) {
@@ -101,8 +122,8 @@ export async function isAdminAuthenticated(): Promise<boolean> {
 /**
  * Set the admin session cookie on the response.
  */
-export function setSessionCookie(response: Response): void {
-  const token = createSessionToken();
+export function setSessionCookie(response: Response, mobile: string): void {
+  const token = createSessionToken(mobile);
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
   response.headers.append(
     'Set-Cookie',

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 process.env.DEMO_MODE = 'true';
+process.env.AUTHORIZED_ADMIN_NUMBERS = '+91:9530654704,+91:6283974746';
 
 import { GET } from '@/app/api/admin/login-status/route';
 import { resolveAt, loginAttempts } from '@/app/api/admin/login-status/route';

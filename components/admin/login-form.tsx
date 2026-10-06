@@ -25,7 +25,7 @@ const STATUS_CONTENT_CLASS =
 export function AdminLoginForm() {
   const router = useRouter();
   const [countryCode, setCountryCode] = useState('+91');
-  const [mobile, setMobile] = useState('9530654704');
+  const [mobile, setMobile] = useState('');
   const [phase, setPhase] = useState<LoginPhase>('idle');
   const [requestId, setRequestId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export function AdminLoginForm() {
   useEffect(() => {
     if (phase !== 'polling' || !requestId) return;
 
-    const interval = setInterval(pollStatus, 2000);
+    const interval = setInterval(pollStatus, 3000);
     return () => clearInterval(interval);
   }, [phase, requestId, pollStatus]);
 
@@ -145,8 +145,9 @@ export function AdminLoginForm() {
                       value={mobile}
                       onChange={e => setMobile(e.target.value)}
                       containerClassName="min-w-0 flex-1"
-                      placeholder="Mobile number"
+                      placeholder="Enter your mobile number"
                       inputMode="numeric"
+                      autoComplete="tel-national"
                     />
                   </div>
                 </div>

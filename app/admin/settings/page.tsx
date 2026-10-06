@@ -9,6 +9,15 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ShieldCheck, Server, Key, Mail, Info } from 'lucide-react';
+import { getAuthorizedAdminNumbers } from '@/lib/admin/authorized-admins';
+
+const authorizedAdmins = getAuthorizedAdminNumbers();
+const authorizedAdminDisplay =
+  authorizedAdmins.length > 0
+    ? authorizedAdmins
+      .map(admin => `${admin.countryCode} ${admin.mobile}`)
+      .join(', ')
+    : 'Not configured (set AUTHORIZED_ADMIN_NUMBERS in .env)';
 
 function SettingsRow({ label, value }: { label: string; value: string }) {
   return (
@@ -44,7 +53,10 @@ export default function AdminSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
-          <SettingsRow label="Admin Mobile" value="+91 9530654704" />
+          <SettingsRow
+            label="Authorized admin mobiles"
+            value={authorizedAdminDisplay}
+          />
           <SettingsRow label="Role" value="Super Admin" />
           <SettingsRow label="Auth Method" value="iVALT Biometric" />
           <SettingsRow label="Session Duration" value="24 hours" />
