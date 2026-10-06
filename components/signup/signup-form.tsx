@@ -18,15 +18,16 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
 import { CaptchaWidget } from '@/components/ui/captcha-widget';
-import { isCaptchaConfigured } from '@/lib/captcha';
+import type { SignupCaptchaConfig } from '@/lib/captcha';
 import { useState } from 'react';
 
 type Props = {
+  captcha: SignupCaptchaConfig;
   onSubmit: (values: SignupValues) => Promise<void>;
   submitting?: boolean;
 };
 
-export function SignupForm({ onSubmit, submitting }: Props) {
+export function SignupForm({ captcha, onSubmit, submitting }: Props) {
   const [captchaToken, setCaptchaToken] = useState<string>('');
   const [captchaError, setCaptchaError] = useState<string>('');
 
@@ -56,10 +57,13 @@ export function SignupForm({ onSubmit, submitting }: Props) {
   const countryCode = watch('countryCode');
   const mobile = watch('mobile');
 
-  const captchaConfigured = isCaptchaConfigured();
+  const showCaptchaWidget = !!captcha.siteKey;
 
   const handleFormSubmit = handleSubmit(async values => {
-    if (captchaConfigured && !captchaToken) {
+    if (captcha.misconfigured) {
+      return;
+    }
+    if (captcha.required && !captchaToken) {
       setCaptchaError('Please complete the security verification above.');
       return;
     }
@@ -187,13 +191,21 @@ export function SignupForm({ onSubmit, submitting }: Props) {
         />
       </Field>
 
-      {captchaConfigured && (
+      {captcha.misconfigured && (
+        <p className="text-sm text-destructive" role="alert">
+          Signup is temporarily unavailable. Please contact iVALT support.
+        </p>
+      )}
+
+      {showCaptchaWidget && (
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="size-3.5" aria-hidden />
             <span>Security verification required</span>
           </div>
           <CaptchaWidget
+            provider={captcha.provider}
+            siteKey={captcha.siteKey!}
             onVerify={token => {
               setCaptchaToken(token);
               setValue('captchaToken', token, { shouldValidate: true });
@@ -222,7 +234,7 @@ export function SignupForm({ onSubmit, submitting }: Props) {
         </p>
         <Button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || captcha.misconfigured}
           className="w-full sm:w-auto"
         >
           {submitting ? (

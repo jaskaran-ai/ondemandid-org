@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { SignupForm } from '@/components/signup/signup-form';
 import { useSignup } from '@/hooks/use-api';
 import type { SignupValues } from '@/lib/validation';
+import type { SignupCaptchaConfig } from '@/lib/captcha';
 
 type SuccessState = {
   id: string;
@@ -14,7 +15,7 @@ type SuccessState = {
   email: string;
 };
 
-export function SignupClient() {
+export function SignupClient({ captcha }: { captcha: SignupCaptchaConfig }) {
   const [success, setSuccess] = useState<SuccessState | null>(null);
   const signupMutation = useSignup();
 
@@ -41,6 +42,7 @@ export function SignupClient() {
     <div className="grid grid-cols-1 gap-12 lg:grid-cols-[1fr_400px] lg:gap-16">
       <div className="rounded-xl border border-border bg-card p-6 md:p-8">
         <SignupForm
+          captcha={captcha}
           onSubmit={handleSubmit}
           submitting={signupMutation.isPending}
         />

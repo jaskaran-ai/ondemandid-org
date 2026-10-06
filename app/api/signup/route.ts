@@ -6,7 +6,11 @@ import {
   sendCustomerConfirmation,
 } from '@/lib/email';
 import { checkRateLimit, stripHtml } from '@/lib/security';
-import { verifyCaptchaToken, isCaptchaEnforced } from '@/lib/captcha';
+import {
+  verifyCaptchaToken,
+  isCaptchaEnforced,
+  isCaptchaMisconfigured,
+} from '@/lib/captcha';
 
 const MAX_BODY_SIZE = 256_000; // 256 KB
 const RATE_LIMIT_MAX = 5;
@@ -106,6 +110,16 @@ export async function POST(request: Request) {
           'X-RateLimit-Reset': String(Math.ceil(rateLimit.resetAt / 1000)),
         },
       }
+    );
+  }
+
+  if (isCaptchaMisconfigured()) {
+    console.error(
+      'Signup blocked: CAPTCHA secret is set but NEXT_PUBLIC site key is missing'
+    );
+    return NextResponse.json(
+      { error: 'Signup is temporarily unavailable. Please try again later.' },
+      { status: 503 }
     );
   }
 

@@ -29,13 +29,53 @@ export function getPublicCaptchaProvider(): CaptchaProvider {
   return 'turnstile';
 }
 
-/** Server will reject signup without a token when this is true. */
-export function isCaptchaEnforced(): boolean {
+function captchaKeyPair(): { secret: boolean; siteKey: boolean } {
   const provider = getCaptchaProvider();
   if (provider === 'recaptcha') {
-    return !!process.env.RECAPTCHA_SECRET_KEY;
+    return {
+      secret: !!process.env.RECAPTCHA_SECRET_KEY,
+      siteKey: !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY,
+    };
   }
-  return !!process.env.TURNSTILE_SECRET_KEY;
+  return {
+    secret: !!process.env.TURNSTILE_SECRET_KEY,
+    siteKey: !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+  };
+}
+
+/** Secret without public site key — server would block signup with no widget. */
+export function isCaptchaMisconfigured(): boolean {
+  const { secret, siteKey } = captchaKeyPair();
+  return secret && !siteKey;
+}
+
+/** Server will reject signup without a token when both keys are set. */
+export function isCaptchaEnforced(): boolean {
+  if (isCaptchaMisconfigured()) {
+    return false;
+  }
+  const { secret, siteKey } = captchaKeyPair();
+  return secret && siteKey;
+}
+
+export type SignupCaptchaConfig = {
+  provider: CaptchaProvider;
+  siteKey: string | null;
+  required: boolean;
+  misconfigured: boolean;
+};
+
+/** Read at request time on the server and pass into the signup client. */
+export function getSignupCaptchaConfig(): SignupCaptchaConfig {
+  const provider = getCaptchaProvider();
+  const siteKey = getCaptchaSiteKey() ?? null;
+  const misconfigured = isCaptchaMisconfigured();
+  return {
+    provider,
+    siteKey,
+    required: isCaptchaEnforced(),
+    misconfigured,
+  };
 }
 
 async function verifyReCaptchaToken(token: string): Promise<boolean> {
@@ -81,11 +121,7 @@ export async function verifyCaptchaToken(
   return result.success;
 }
 
-/** Show widget on signup when the public site key is configured. */
+/** @deprecated Prefer `getSignupCaptchaConfig()` from a Server Component. */
 export function isCaptchaConfigured(): boolean {
-  const provider = getPublicCaptchaProvider();
-  if (provider === 'recaptcha') {
-    return !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
-  }
-  return !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  return !!getCaptchaSiteKey();
 }

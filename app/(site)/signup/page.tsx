@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { SignupClient } from '@/components/signup/signup-client';
+import { getSignupCaptchaConfig } from '@/lib/captcha';
 
 const baseUrl =
   process.env.NEXT_PUBLIC_APP_URL ?? 'https://register.ondemandid.com';
@@ -24,6 +25,8 @@ export const metadata: Metadata = {
 };
 
 export default function SignupPage() {
+  const captcha = getSignupCaptchaConfig();
+
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-12 md:px-6 md:py-16">
       <header className="mx-auto max-w-3xl text-center">
@@ -41,7 +44,7 @@ export default function SignupPage() {
       </header>
 
       <div className="mt-12">
-        <SignupClient />
+        <SignupClient captcha={captcha} />
       </div>
     </div>
   );
