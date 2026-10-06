@@ -49,3 +49,5 @@ local.db
 codedb.snapshot
 
 .poolside/
+# Added by code-review-graph
+.code-review-graph/
