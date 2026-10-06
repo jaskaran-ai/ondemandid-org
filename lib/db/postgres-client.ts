@@ -9,9 +9,12 @@ let sql: ReturnType<typeof postgres> | undefined;
 export function getPostgresClient(connectionString: string) {
   if (!sql) {
     sql = postgres(connectionString, {
-      max: 1,
+      // Allow a few concurrent queries (dashboard stats runs multiple reads).
+      max: 5,
       prepare: false,
       ssl: 'require',
+      connect_timeout: 15,
+      idle_timeout: 20,
     });
   }
   return sql;

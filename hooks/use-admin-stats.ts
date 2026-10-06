@@ -2,7 +2,13 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { orpc } from '@/lib/orpc/client';
+import { useAdminSession } from '@/hooks/use-admin-login';
 
 export function useAdminStats() {
-  return useQuery(orpc.stats.queryOptions());
+  const { data: session, isPending: sessionPending } = useAdminSession();
+
+  return useQuery({
+    ...orpc.stats.queryOptions(),
+    enabled: !sessionPending && session?.authenticated === true,
+  });
 }

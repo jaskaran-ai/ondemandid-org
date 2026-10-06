@@ -106,9 +106,9 @@ function RequestStatusIcon({ status }: { status: string }) {
 }
 
 export function AdminDashboard() {
-  const { data, isLoading, error } = useAdminStats();
+  const { data, isPending, isFetching, error } = useAdminStats();
 
-  if (isLoading) {
+  if (isPending || isFetching) {
     return (
       <div className="space-y-8">
         <div>

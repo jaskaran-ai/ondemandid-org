@@ -11,6 +11,11 @@ const link = new RPCLink({
     typeof window !== 'undefined'
       ? `${window.location.origin}/api/rpc`
       : 'http://localhost:3000/api/rpc',
+  fetch: (input, init) =>
+    fetch(input, {
+      ...init,
+      credentials: 'include',
+    }),
   headers: async () => {
     if (typeof window !== 'undefined') {
       return {};

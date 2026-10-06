@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orpc } from '@/lib/orpc/client';
+import { useAdminSession } from '@/hooks/use-admin-login';
 import { toast } from 'sonner';
 
 export function useAdminCustomers(
@@ -10,9 +11,14 @@ export function useAdminCustomers(
   page: number = 1,
   pageSize?: number
 ) {
-  return useQuery(
-    orpc.customers.list.queryOptions({ input: { status, search, page, pageSize } })
-  );
+  const { data: session, isPending: sessionPending } = useAdminSession();
+
+  return useQuery({
+    ...orpc.customers.list.queryOptions({
+      input: { status, search, page, pageSize },
+    }),
+    enabled: !sessionPending && session?.authenticated === true,
+  });
 }
 
 export function useAdminUpdateCustomer() {
@@ -32,24 +38,24 @@ export function useAdminUpdateCustomer() {
         old =>
           old
             ? {
-                ...old,
-                customers: old.customers.map(c =>
-                  String(c.id) === String(variables.id)
-                    ? {
-                        ...c,
-                        status: variables.status ?? c.status,
-                        idConnection:
-                          variables.idConnection !== undefined
-                            ? variables.idConnection
-                            : c.idConnection,
-                        notes:
-                          variables.notes !== undefined
-                            ? variables.notes
-                            : c.notes,
-                      }
-                    : c
-                ),
-              }
+              ...old,
+              customers: old.customers.map(c =>
+                String(c.id) === String(variables.id)
+                  ? {
+                    ...c,
+                    status: variables.status ?? c.status,
+                    idConnection:
+                      variables.idConnection !== undefined
+                        ? variables.idConnection
+                        : c.idConnection,
+                    notes:
+                      variables.notes !== undefined
+                        ? variables.notes
+                        : c.notes,
+                  }
+                  : c
+              ),
+            }
             : old
       );
 
@@ -67,9 +73,9 @@ export function useAdminUpdateCustomer() {
       toast.success('Customer updated successfully');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.list.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.stats.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.stats.key() });
     },
   });
 }
@@ -149,13 +155,13 @@ export function useAdminCreateCustomer() {
           old =>
             old
               ? {
-                  ...old,
-                  customers: old.customers.map(c =>
-                    String(c.id) === String(context.tempId)
-                      ? { ...c, id: result.id }
-                      : c
-                  ),
-                }
+                ...old,
+                customers: old.customers.map(c =>
+                  String(c.id) === String(context.tempId)
+                    ? { ...c, id: result.id }
+                    : c
+                ),
+              }
               : old
         );
       }
@@ -169,9 +175,9 @@ export function useAdminCreateCustomer() {
       toast.error(error.message || 'Failed to create customer');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.list.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.stats.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.stats.key() });
     },
   });
 }
@@ -212,12 +218,12 @@ export function useAdminDeleteCustomer() {
         old =>
           old
             ? {
-                ...old,
-                customers: old.customers.filter(
-                  c => String(c.id) !== String(variables.id)
-                ),
-                total: Math.max(0, old.total - 1),
-              }
+              ...old,
+              customers: old.customers.filter(
+                c => String(c.id) !== String(variables.id)
+              ),
+              total: Math.max(0, old.total - 1),
+            }
             : old
       );
 
@@ -233,9 +239,9 @@ export function useAdminDeleteCustomer() {
     },
     onSuccess: () => {
       toast.success('Customer deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
-      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.list.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.stats.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.customers.stats.key() });
     },
   });
 }

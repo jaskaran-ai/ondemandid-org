@@ -45,9 +45,9 @@ function StatCard({
 }
 
 export function CustomerStats() {
-  const { data, isLoading, error } = useAdminCustomerStats();
+  const { data, isPending, isFetching, error } = useAdminCustomerStats();
 
-  if (isLoading) {
+  if (isPending || isFetching) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (

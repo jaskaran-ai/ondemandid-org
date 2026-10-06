@@ -1,6 +1,8 @@
 import { RPCHandler } from '@orpc/server/fetch';
 import { adminRouter } from '@/lib/orpc/router';
 
+export const runtime = 'nodejs';
+
 const handler = new RPCHandler(adminRouter);
 
 async function handleRequest(request: Request) {

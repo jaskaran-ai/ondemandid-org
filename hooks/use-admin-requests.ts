@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { orpc } from '@/lib/orpc/client';
+import { useAdminSession } from '@/hooks/use-admin-login';
 import { toast } from 'sonner';
 
 export function useAdminRequests(
@@ -9,9 +10,12 @@ export function useAdminRequests(
   page: number = 1,
   pageSize?: number
 ) {
-  return useQuery(
-    orpc.requests.list.queryOptions({ input: { status, page, pageSize } })
-  );
+  const { data: session, isPending: sessionPending } = useAdminSession();
+
+  return useQuery({
+    ...orpc.requests.list.queryOptions({ input: { status, page, pageSize } }),
+    enabled: !sessionPending && session?.authenticated === true,
+  });
 }
 
 interface RequestsListData {
@@ -36,12 +40,12 @@ export function useAdminDeleteRequest() {
         old =>
           old
             ? {
-                ...old,
-                requests: old.requests.filter(
-                  r => String(r.id) !== String(variables.id)
-                ),
-                total: Math.max(0, old.total - 1),
-              }
+              ...old,
+              requests: old.requests.filter(
+                r => String(r.id) !== String(variables.id)
+              ),
+              total: Math.max(0, old.total - 1),
+            }
             : old
       );
 
@@ -57,8 +61,8 @@ export function useAdminDeleteRequest() {
     },
     onSuccess: () => {
       toast.success('Request deleted successfully');
-      queryClient.invalidateQueries({ queryKey: ['requests', 'list'] });
-      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: orpc.requests.list.key() });
+      queryClient.invalidateQueries({ queryKey: orpc.stats.key() });
     },
   });
 }

@@ -120,31 +120,33 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   const r = schema.ondemandRequests;
 
-  const [customerStats, requestStats, recentRequests] = await Promise.all([
-    getCustomerStats(),
-    db
-      .select({
-        total: sql<number>`count(case when ${r.deletedAt} is null then 1 end)`,
-        authenticated: sql<number>`count(case when ${r.status} = 'authenticated' and ${r.deletedAt} is null then 1 end)`,
-        failed: sql<number>`count(case when ${r.status} = 'failed' and ${r.deletedAt} is null then 1 end)`,
-        pending: sql<number>`count(case when ${r.status} in ('pending', 'initiated') and ${r.deletedAt} is null then 1 end)`,
-      })
-      .from(r),
-    db
-      .select({
-        id: r.id,
-        idConnection: r.idConnection,
-        mobile: r.mobile,
-        status: r.status,
-        createdAt: r.createdAt,
-      })
-      .from(r)
-      .where(isNull(r.deletedAt))
-      .orderBy(desc(r.createdAt))
-      .limit(5),
-  ]);
+  // Sequential reads: with Supabase pooler + a small client pool, parallel
+  // queries on the same drizzle client can stall for tens of seconds in Next.js.
+  const customerStats = await getCustomerStats();
 
-  const rs = requestStats[0];
+  const [requestStatsRow] = await db
+    .select({
+      total: sql<number>`count(case when ${r.deletedAt} is null then 1 end)`,
+      authenticated: sql<number>`count(case when ${r.status} = 'authenticated' and ${r.deletedAt} is null then 1 end)`,
+      failed: sql<number>`count(case when ${r.status} = 'failed' and ${r.deletedAt} is null then 1 end)`,
+      pending: sql<number>`count(case when ${r.status} in ('pending', 'initiated') and ${r.deletedAt} is null then 1 end)`,
+    })
+    .from(r);
+
+  const recentRequests = await db
+    .select({
+      id: r.id,
+      idConnection: r.idConnection,
+      mobile: r.mobile,
+      status: r.status,
+      createdAt: r.createdAt,
+    })
+    .from(r)
+    .where(isNull(r.deletedAt))
+    .orderBy(desc(r.createdAt))
+    .limit(5);
+
+  const rs = requestStatsRow;
 
   return {
     ...customerStats,
