@@ -63,36 +63,5 @@ export function stripHtml(input: string | null | undefined): string {
     .trim();
 }
 
-/**
- * Verify a Cloudflare Turnstile token server-side.
- */
-export async function verifyTurnstileToken(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY;
-
-  if (!secretKey) {
-    console.warn(
-      'TURNSTILE_SECRET_KEY not set — skipping CAPTCHA verification'
-    );
-    return true;
-  }
-
-  try {
-    const response = await fetch(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          secret: secretKey,
-          response: token,
-        }).toString(),
-      }
-    );
-
-    const data = await response.json();
-    return data.success === true;
-  } catch (error) {
-    console.error('Turnstile verification error:', error);
-    return false;
-  }
-}
+/** @deprecated Use verifyTurnstileToken from `@/lib/captcha/turnstile` */
+export { verifyTurnstileToken } from '@/lib/captcha/turnstile';

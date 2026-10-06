@@ -32,10 +32,10 @@ describe('checkRateLimit', () => {
   it('resets after window expires', async () => {
     const result1 = checkRateLimit('test-key-4', 1, 100);
     expect(result1.allowed).toBe(true);
-    
+
     // Wait for window to expire
     await new Promise(r => setTimeout(r, 150));
-    
+
     const result2 = checkRateLimit('test-key-4', 1, 100);
     expect(result2.allowed).toBe(true);
     expect(result2.remaining).toBe(0);
@@ -74,25 +74,25 @@ describe('verifyTurnstileToken', () => {
   it('returns true when TURNSTILE_SECRET_KEY is not set', async () => {
     const originalKey = process.env.TURNSTILE_SECRET_KEY;
     delete process.env.TURNSTILE_SECRET_KEY;
-    
+
     const result = await verifyTurnstileToken('any-token');
-    expect(result).toBe(true);
-    
+    expect(result.success).toBe(true);
+
     if (originalKey) process.env.TURNSTILE_SECRET_KEY = originalKey;
   });
 
   it('skips verification when secret key is missing', async () => {
     const originalKey = process.env.TURNSTILE_SECRET_KEY;
     delete process.env.TURNSTILE_SECRET_KEY;
-    
-    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
     const result = await verifyTurnstileToken('any-token');
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
     expect(consoleSpy).toHaveBeenCalledWith(
       'TURNSTILE_SECRET_KEY not set — skipping CAPTCHA verification'
     );
     consoleSpy.mockRestore();
-    
+
     if (originalKey) process.env.TURNSTILE_SECRET_KEY = originalKey;
   });
 });

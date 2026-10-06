@@ -6,7 +6,7 @@ import {
   sendCustomerConfirmation,
 } from '@/lib/email';
 import { checkRateLimit, stripHtml } from '@/lib/security';
-import { verifyCaptchaToken, getCaptchaProvider } from '@/lib/captcha';
+import { verifyCaptchaToken, isCaptchaEnforced } from '@/lib/captcha';
 
 const MAX_BODY_SIZE = 256_000; // 256 KB
 const RATE_LIMIT_MAX = 5;
@@ -127,18 +127,16 @@ export async function POST(request: Request) {
 
     // Verify CAPTCHA token (Turnstile or reCAPTCHA based on provider)
     if (data.captchaToken) {
-      const captchaValid = await verifyCaptchaToken(data.captchaToken);
+      const captchaValid = await verifyCaptchaToken(data.captchaToken, {
+        remoteIp: ip,
+      });
       if (!captchaValid) {
         return NextResponse.json(
           { error: 'Security verification failed. Please try again.' },
           { status: 400 }
         );
       }
-    } else if (
-      getCaptchaProvider() === 'recaptcha'
-        ? process.env.RECAPTCHA_SECRET_KEY
-        : process.env.TURNSTILE_SECRET_KEY
-    ) {
+    } else if (isCaptchaEnforced()) {
       // Secret key is configured but token is missing
       return NextResponse.json(
         { error: 'Security verification required.' },

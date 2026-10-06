@@ -1,5 +1,7 @@
 export type CaptchaProvider = 'turnstile' | 'recaptcha';
 
+export { verifyTurnstileToken, type TurnstileVerifyResult } from './turnstile';
+
 export function getCaptchaProvider(): CaptchaProvider {
   const provider = process.env.CAPTCHA_PROVIDER;
   if (provider === 'recaptcha') return 'recaptcha';
@@ -22,32 +24,13 @@ export function getPublicCaptchaProvider(): CaptchaProvider {
   return 'turnstile';
 }
 
-async function verifyTurnstileToken(token: string): Promise<boolean> {
-  const secretKey = process.env.TURNSTILE_SECRET_KEY;
-  if (!secretKey) {
-    console.warn(
-      'TURNSTILE_SECRET_KEY not set — skipping CAPTCHA verification'
-    );
-    return true;
+/** Server will reject signup without a token when this is true. */
+export function isCaptchaEnforced(): boolean {
+  const provider = getCaptchaProvider();
+  if (provider === 'recaptcha') {
+    return !!process.env.RECAPTCHA_SECRET_KEY;
   }
-  try {
-    const response = await fetch(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          secret: secretKey,
-          response: token,
-        }).toString(),
-      }
-    );
-    const data = await response.json();
-    return data.success === true;
-  } catch (error) {
-    console.error('Turnstile verification error:', error);
-    return false;
-  }
+  return !!process.env.TURNSTILE_SECRET_KEY;
 }
 
 async function verifyReCaptchaToken(token: string): Promise<boolean> {
@@ -78,16 +61,24 @@ async function verifyReCaptchaToken(token: string): Promise<boolean> {
   }
 }
 
-export async function verifyCaptchaToken(token: string): Promise<boolean> {
+export async function verifyCaptchaToken(
+  token: string,
+  options?: { remoteIp?: string }
+): Promise<boolean> {
   const provider = getCaptchaProvider();
   if (provider === 'recaptcha') {
     return verifyReCaptchaToken(token);
   }
-  return verifyTurnstileToken(token);
+  const result = await verifyTurnstileToken(token, options);
+  if (!result.success && result.errorCodes?.length) {
+    console.warn('[Turnstile] siteverify failed:', result.errorCodes.join(', '));
+  }
+  return result.success;
 }
 
+/** Show widget on signup when the public site key is configured. */
 export function isCaptchaConfigured(): boolean {
-  const provider = getCaptchaProvider();
+  const provider = getPublicCaptchaProvider();
   if (provider === 'recaptcha') {
     return !!process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
   }
