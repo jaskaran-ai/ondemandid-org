@@ -1,8 +1,5 @@
-# Task: API performance & reliability fixes
+# Turnstile stuck on "Verifying…"
 
-- [x] iVALT fetch timeout (env-configurable)
-- [x] Consolidate dashboard stats queries (2 round-trips vs 9)
-- [x] SQL pagination/filter for admin customers & requests lists
-- [x] Cache email templates in memory
-- [x] Reduce status-route logging; throttle iVALT polls per request
-- [x] Tests + changelog
+- [x] Stabilize Turnstile render (callback refs, explicit script URL)
+- [x] CSP + preconnect for challenges.cloudflare.com
+- [x] Deploy production + verify signup widget
