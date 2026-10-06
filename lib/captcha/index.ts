@@ -1,6 +1,11 @@
 export type CaptchaProvider = 'turnstile' | 'recaptcha';
 
-export { verifyTurnstileToken, type TurnstileVerifyResult } from './turnstile';
+import {
+  verifyTurnstileToken,
+  type TurnstileVerifyResult,
+} from './turnstile';
+
+export { verifyTurnstileToken, type TurnstileVerifyResult };
 
 export function getCaptchaProvider(): CaptchaProvider {
   const provider = process.env.CAPTCHA_PROVIDER;

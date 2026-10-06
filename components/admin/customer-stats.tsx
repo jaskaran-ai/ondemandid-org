@@ -5,7 +5,7 @@ import {
   CardContent,
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAdminStats } from '@/hooks/use-admin-stats';
+import { useAdminCustomerStats } from '@/hooks/use-admin-customer-stats';
 import {
   Users,
   UserCheck,
@@ -45,7 +45,7 @@ function StatCard({
 }
 
 export function CustomerStats() {
-  const { data, isLoading, error } = useAdminStats();
+  const { data, isLoading, error } = useAdminCustomerStats();
 
   if (isLoading) {
     return (

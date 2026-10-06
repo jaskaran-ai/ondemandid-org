@@ -1,7 +1,7 @@
 import { ORPCError } from '@orpc/server';
 import { z } from 'zod';
 import { authedProcedure } from './context';
-import { getDashboardStats } from '@/lib/db/queries/stats';
+import { getCustomerStats, getDashboardStats } from '@/lib/db/queries/stats';
 import {
   getCustomers,
   updateCustomer,
@@ -42,6 +42,17 @@ export const adminStats = authedProcedure.handler(async () => {
     console.error('Admin stats error:', error);
     throw new ORPCError('INTERNAL_SERVER_ERROR', {
       message: 'Failed to fetch stats',
+    });
+  }
+});
+
+export const adminCustomerStats = authedProcedure.handler(async () => {
+  try {
+    return await getCustomerStats();
+  } catch (error) {
+    console.error('Admin customer stats error:', error);
+    throw new ORPCError('INTERNAL_SERVER_ERROR', {
+      message: 'Failed to fetch customer stats',
     });
   }
 });
@@ -176,6 +187,7 @@ export const adminRequestDelete = authedProcedure
 export const adminRouter = {
   stats: adminStats,
   customers: {
+    stats: adminCustomerStats,
     list: adminCustomersList,
     update: adminCustomerUpdate,
     create: adminCustomerCreate,

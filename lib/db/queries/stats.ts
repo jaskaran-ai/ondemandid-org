@@ -1,11 +1,14 @@
 import { db, schema } from '@/lib/db';
 import { isNull, sql, desc } from 'drizzle-orm';
 
-export interface DashboardStats {
+export interface CustomerStatsSummary {
   totalCustomers: number;
   activeCustomers: number;
   pendingCustomers: number;
   inactiveCustomers: number;
+}
+
+export interface DashboardStats extends CustomerStatsSummary {
   totalRequests: number;
   authenticatedRequests: number;
   failedRequests: number;
@@ -30,6 +33,36 @@ function toCount(value: unknown): number {
   if (typeof value === 'number') return value;
   if (typeof value === 'string') return parseInt(value, 10) || 0;
   return 0;
+}
+
+export async function getCustomerStats(): Promise<CustomerStatsSummary> {
+  const isDemo = process.env.DEMO_MODE === 'true';
+
+  if (isDemo) {
+    return {
+      totalCustomers: 5,
+      activeCustomers: 3,
+      pendingCustomers: 1,
+      inactiveCustomers: 1,
+    };
+  }
+
+  const c = schema.customers;
+  const [row] = await db
+    .select({
+      total: sql<number>`count(case when ${c.deletedAt} is null then 1 end)`,
+      active: sql<number>`count(case when ${c.status} = 'active' and ${c.deletedAt} is null then 1 end)`,
+      pending: sql<number>`count(case when ${c.status} = 'pending' and ${c.deletedAt} is null then 1 end)`,
+      inactive: sql<number>`count(case when ${c.status} = 'inactive' and ${c.deletedAt} is null then 1 end)`,
+    })
+    .from(c);
+
+  return {
+    totalCustomers: toCount(row?.total),
+    activeCustomers: toCount(row?.active),
+    pendingCustomers: toCount(row?.pending),
+    inactiveCustomers: toCount(row?.inactive),
+  };
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -85,18 +118,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   }
 
-  const c = schema.customers;
   const r = schema.ondemandRequests;
 
   const [customerStats, requestStats, recentRequests] = await Promise.all([
-    db
-      .select({
-        total: sql<number>`count(case when ${c.deletedAt} is null then 1 end)`,
-        active: sql<number>`count(case when ${c.status} = 'active' and ${c.deletedAt} is null then 1 end)`,
-        pending: sql<number>`count(case when ${c.status} = 'pending' and ${c.deletedAt} is null then 1 end)`,
-        inactive: sql<number>`count(case when ${c.status} = 'inactive' and ${c.deletedAt} is null then 1 end)`,
-      })
-      .from(c),
+    getCustomerStats(),
     db
       .select({
         total: sql<number>`count(case when ${r.deletedAt} is null then 1 end)`,
@@ -119,14 +144,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       .limit(5),
   ]);
 
-  const cs = customerStats[0];
   const rs = requestStats[0];
 
   return {
-    totalCustomers: toCount(cs?.total),
-    activeCustomers: toCount(cs?.active),
-    pendingCustomers: toCount(cs?.pending),
-    inactiveCustomers: toCount(cs?.inactive),
+    ...customerStats,
     totalRequests: toCount(rs?.total),
     authenticatedRequests: toCount(rs?.authenticated),
     failedRequests: toCount(rs?.failed),

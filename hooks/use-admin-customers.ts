@@ -69,6 +69,7 @@ export function useAdminUpdateCustomer() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
     },
   });
 }
@@ -170,6 +171,7 @@ export function useAdminCreateCustomer() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
     },
   });
 }
@@ -233,6 +235,7 @@ export function useAdminDeleteCustomer() {
       toast.success('Customer deleted successfully');
       queryClient.invalidateQueries({ queryKey: ['customers', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['customers', 'stats'] });
     },
   });
 }

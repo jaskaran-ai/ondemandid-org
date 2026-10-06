@@ -37,9 +37,10 @@ export function useAdminSession() {
     queryKey: ['admin-session'],
     queryFn: async () => {
       const res = await api.get('/api/admin/session');
-      return res.data;
+      return res.data as { authenticated: boolean };
     },
     retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 
