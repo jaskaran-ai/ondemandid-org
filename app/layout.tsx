@@ -106,6 +106,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${inter.variable} ${sourceSerif.variable} bg-background`}
     >
+      <head>
+        <link rel="preconnect" href="https://challenges.cloudflare.com" />
+      </head>
       <body className="font-sans antialiased min-h-screen bg-background text-foreground">
         <QueryProvider>
           <CustomThemeProvider defaultTheme="system" storageKey="ivalt-theme">

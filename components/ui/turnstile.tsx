@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface TurnstileProps {
   siteKey?: string;
@@ -29,10 +29,17 @@ export function Turnstile({
 }: TurnstileProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const onVerifyRef = useRef(onVerify);
+  const onErrorRef = useRef(onError);
+  const onExpireRef = useRef(onExpire);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [scriptError, setScriptError] = useState(false);
 
   const key = siteKey || process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  onVerifyRef.current = onVerify;
+  onErrorRef.current = onError;
+  onExpireRef.current = onExpire;
 
   // Load Turnstile script
   useEffect(() => {
@@ -61,7 +68,8 @@ export function Turnstile({
 
     const script = document.createElement('script');
     script.id = 'turnstile-script';
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+    script.src =
+      'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
     script.async = true;
     script.defer = true;
     script.onload = () => setScriptLoaded(true);
@@ -69,11 +77,12 @@ export function Turnstile({
     document.body.appendChild(script);
   }, [key]);
 
-  // Render widget once script is loaded
-  const renderWidget = useCallback(() => {
-    if (!containerRef.current || !window.turnstile || !key) return;
+  // Render once per mount / theme / sitekey — not when parent passes new callback refs
+  useEffect(() => {
+    if (!scriptLoaded || !containerRef.current || !window.turnstile || !key) {
+      return;
+    }
 
-    // Remove existing widget if any
     if (widgetIdRef.current) {
       try {
         window.turnstile.remove(widgetIdRef.current);
@@ -86,17 +95,11 @@ export function Turnstile({
     widgetIdRef.current = window.turnstile.render(containerRef.current, {
       sitekey: key,
       theme,
-      callback: onVerify,
-      'error-callback': onError,
-      'expired-callback': onExpire,
+      callback: (token: string) => onVerifyRef.current(token),
+      'error-callback': () => onErrorRef.current?.(),
+      'expired-callback': () => onExpireRef.current?.(),
     });
-  }, [key, theme, onVerify, onError, onExpire]);
-
-  useEffect(() => {
-    if (scriptLoaded) {
-      renderWidget();
-    }
-  }, [scriptLoaded, renderWidget]);
+  }, [scriptLoaded, key, theme]);
 
   // Cleanup on unmount
   useEffect(() => {
