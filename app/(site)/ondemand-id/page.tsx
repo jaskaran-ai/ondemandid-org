@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { VerificationClient } from '@/components/verification/verification-client';
 
 const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? 'https://ondemandid.ivalt.com';
+  process.env.NEXT_PUBLIC_APP_URL ?? 'https://register.ondemandid.com';
 
 export const metadata: Metadata = {
   title: 'Verify identity with iVALT',

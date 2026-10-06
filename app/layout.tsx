@@ -19,7 +19,7 @@ const sourceSerif = Source_Serif_4({
 });
 
 const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? 'https://ondemandid.ivalt.com';
+  process.env.NEXT_PUBLIC_APP_URL ?? 'https://register.ondemandid.com';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),

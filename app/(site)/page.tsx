@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? 'https://ondemandid.ivalt.com';
+    process.env.NEXT_PUBLIC_APP_URL ?? 'https://register.ondemandid.com';
 
   const structuredData = {
     '@context': 'https://schema.org',

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { SignupClient } from '@/components/signup/signup-client';
 
 const baseUrl =
-  process.env.NEXT_PUBLIC_APP_URL ?? 'https://ondemandid.ivalt.com';
+  process.env.NEXT_PUBLIC_APP_URL ?? 'https://register.ondemandid.com';
 
 export const metadata: Metadata = {
   title: 'Start your trial',
