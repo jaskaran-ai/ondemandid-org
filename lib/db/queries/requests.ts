@@ -1,4 +1,4 @@
-import { db, schema } from '@/lib/db';
+import { db, schema, isUsingPostgres } from '@/lib/db';
 import {
   and,
   count,
@@ -215,7 +215,7 @@ export async function deleteRequest(
 
   const deleteData: Record<string, unknown> = {};
 
-  if (process.env.DB_TYPE === 'neon') {
+  if (isUsingPostgres) {
     deleteData.deletedAt = new Date();
   } else {
     deleteData.deletedAt = sql`${Math.floor(Date.now() / 1000)}`;

@@ -1,4 +1,4 @@
-import { db, schema } from '@/lib/db';
+import { db, schema, isUsingPostgres } from '@/lib/db';
 import {
   and,
   count,
@@ -213,7 +213,7 @@ export async function updateCustomer(
     updateData.idConnection = data.idConnection;
   if (data.notes !== undefined) updateData.notes = data.notes;
 
-  if (process.env.DB_TYPE === 'neon') {
+  if (isUsingPostgres) {
     updateData.updatedAt = new Date();
   } else {
     updateData.updatedAt = sql`${Math.floor(Date.now() / 1000)}`;
@@ -257,7 +257,7 @@ export async function createCustomer(
     status: 'pending',
   };
 
-  if (process.env.DB_TYPE === 'neon') {
+  if (isUsingPostgres) {
     insertData.createdAt = new Date();
   } else {
     insertData.createdAt = sql`${Math.floor(Date.now() / 1000)}`;
@@ -283,7 +283,7 @@ export async function deleteCustomer(
 
   const deleteData: Record<string, unknown> = {};
 
-  if (process.env.DB_TYPE === 'neon') {
+  if (isUsingPostgres) {
     deleteData.deletedAt = new Date();
   } else {
     deleteData.deletedAt = sql`${Math.floor(Date.now() / 1000)}`;

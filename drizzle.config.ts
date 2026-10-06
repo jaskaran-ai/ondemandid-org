@@ -1,14 +1,17 @@
 import type { Config } from 'drizzle-kit';
+import { getDatabaseKind } from './lib/db/config';
 
-const dbType = process.env.DB_TYPE || 'sqlite';
+const dbKind = getDatabaseKind();
 
 export default {
   schema:
-    dbType === 'neon' ? './lib/db/schema.pg.ts' : './lib/db/schema.sqlite.ts',
+    dbKind === 'postgres'
+      ? './lib/db/schema.pg.ts'
+      : './lib/db/schema.sqlite.ts',
   out: './drizzle',
-  dialect: dbType === 'neon' ? 'postgresql' : 'sqlite',
+  dialect: dbKind === 'postgres' ? 'postgresql' : 'sqlite',
   dbCredentials:
-    dbType === 'neon'
+    dbKind === 'postgres'
       ? { url: process.env.DATABASE_URL! }
       : { url: process.env.SQLITE_DB_PATH || './local.db' },
 } satisfies Config;

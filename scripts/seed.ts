@@ -1,9 +1,9 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
 import { customers } from '@/lib/db/schema.pg';
+import { getPostgresClient } from '@/lib/db/postgres-client';
 import { sql } from 'drizzle-orm';
 
-const client = postgres(process.env.DATABASE_URL!);
+const client = getPostgresClient(process.env.DATABASE_URL!);
 const db = drizzle(client, { schema: { customers } });
 
 async function main() {

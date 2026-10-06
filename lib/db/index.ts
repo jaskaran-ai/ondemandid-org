@@ -1,22 +1,29 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
-import postgres from 'postgres';
 import Database from 'better-sqlite3';
 import * as pgSchema from './schema.pg';
 import * as sqliteSchema from './schema.sqlite';
+import { getDatabaseKind } from './config';
+import { getPostgresClient } from './postgres-client';
 
-const dbType = process.env.DB_TYPE || 'sqlite';
+const dbKind = getDatabaseKind();
+const postgresUrl = process.env.DATABASE_URL;
+
+export const isUsingPostgres = dbKind === 'postgres' && !!postgresUrl;
 
 let db: any;
 let schema: any;
 
-if (dbType === 'neon' && process.env.DATABASE_URL) {
-  // PostgreSQL (Neon)
-  const client = postgres(process.env.DATABASE_URL);
+if (isUsingPostgres) {
+  const client = getPostgresClient(postgresUrl!);
   db = drizzle(client, { schema: pgSchema });
   schema = pgSchema;
 } else {
-  // SQLite (local development)
+  if (dbKind === 'postgres' && !postgresUrl) {
+    console.warn(
+      '[db] DB_TYPE is postgres (Supabase) but DATABASE_URL is unset — using SQLite.'
+    );
+  }
   const dbPath = process.env.SQLITE_DB_PATH || './local.db';
   const sqlite = new Database(dbPath);
   db = drizzleSqlite(sqlite, { schema: sqliteSchema });

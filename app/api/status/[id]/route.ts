@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db, schema } from '@/lib/db';
+import { db, schema, isUsingPostgres } from '@/lib/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { getAuthResult, mapIvaltStatus } from '@/lib/ivalt';
 import {
@@ -148,7 +148,7 @@ async function handleProductionMode(id: string) {
         status,
         ivaltStatusCode,
         ivaltResponse:
-          process.env.DB_TYPE === 'neon'
+          isUsingPostgres
             ? authResult
             : JSON.stringify(authResult),
       };
@@ -160,10 +160,9 @@ async function handleProductionMode(id: string) {
         status === 'not_found'
       ) {
         clearIvaltPollThrottle(id);
-        const isSqlite = process.env.DB_TYPE === 'sqlite';
-        updateData.completedAt = isSqlite
-          ? new Date().toISOString()
-          : new Date();
+        updateData.completedAt = isUsingPostgres
+          ? new Date()
+          : new Date().toISOString();
       }
 
       await db

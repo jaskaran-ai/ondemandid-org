@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifySchema } from '@/lib/validation';
-import { db, schema } from '@/lib/db';
+import { db, schema, isUsingPostgres } from '@/lib/db';
 import { eq, and } from 'drizzle-orm';
 import { triggerAuthRequest, mapIvaltStatus } from '@/lib/ivalt';
 import { sendAdminVerificationAlert } from '@/lib/email';
@@ -135,7 +135,7 @@ async function handleProductionMode(data: any, request: Request) {
     .set({
       ivaltStatusCode,
       ivaltResponse:
-        process.env.DB_TYPE === 'neon'
+        isUsingPostgres
           ? ivaltResponse
           : JSON.stringify(ivaltResponse),
     })
