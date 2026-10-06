@@ -104,7 +104,7 @@ export function useStatus(requestId: string, enabled: boolean = true) {
       ) {
         return false;
       }
-      return 2000;
+      return 3000;
     },
     refetchIntervalInBackground: true,
     retry: 1,

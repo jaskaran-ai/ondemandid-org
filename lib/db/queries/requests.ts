@@ -1,5 +1,14 @@
 import { db, schema } from '@/lib/db';
-import { desc, eq, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNull,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 export interface VerificationRequest {
   id: string | number;
@@ -116,6 +125,25 @@ const demoRequests: DemoRequest[] = [
   },
 ];
 
+function buildRequestWhere(status?: string | null): SQL | undefined {
+  const conditions: SQL[] = [isNull(schema.ondemandRequests.deletedAt)];
+
+  if (status && status !== 'all') {
+    if (status === 'pending') {
+      conditions.push(
+        or(
+          eq(schema.ondemandRequests.status, 'pending'),
+          eq(schema.ondemandRequests.status, 'initiated')
+        )!
+      );
+    } else {
+      conditions.push(eq(schema.ondemandRequests.status, status));
+    }
+  }
+
+  return and(...conditions);
+}
+
 export async function getRequests(
   status?: string | null,
   page: number = 1,
@@ -139,28 +167,33 @@ export async function getRequests(
     }
     filtered = list;
   } else {
-    const allRequests = await db
-      .select()
-      .from(schema.ondemandRequests)
-      .where(isNull(schema.ondemandRequests.deletedAt))
-      .orderBy(desc(schema.ondemandRequests.createdAt));
+    const where = buildRequestWhere(status);
+    const offset = (page - 1) * pageSize;
 
-    let list = allRequests;
-    if (status && status !== 'all') {
-      if (status === 'pending') {
-        list = list.filter(
-          (r: any) => r.status === 'pending' || r.status === 'initiated'
-        );
-      } else {
-        list = list.filter((r: any) => r.status === status);
-      }
-    }
+    const [countRow, rows] = await Promise.all([
+      db
+        .select({ total: count() })
+        .from(schema.ondemandRequests)
+        .where(where),
+      db
+        .select()
+        .from(schema.ondemandRequests)
+        .where(where)
+        .orderBy(desc(schema.ondemandRequests.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-    filtered = list.map(r => ({
-      ...r,
-      createdAt: toTimestamp((r as any).createdAt) ?? 0,
-      completedAt: toTimestamp((r as any).completedAt),
-    })) as VerificationRequest[];
+    return {
+      requests: rows.map(r => ({
+        ...r,
+        createdAt: toTimestamp((r as { createdAt: unknown }).createdAt) ?? 0,
+        completedAt: toTimestamp(
+          (r as { completedAt: unknown }).completedAt
+        ),
+      })) as VerificationRequest[],
+      total: countRow[0]?.total ?? 0,
+    };
   }
 
   const total = filtered.length;

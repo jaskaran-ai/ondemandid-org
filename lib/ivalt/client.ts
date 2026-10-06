@@ -12,6 +12,11 @@ const IVALT_API_KEY = process.env.IVALT_API_KEY;
 const DEBUG_MODE =
   process.env.DEBUG_MODE === 'true' || process.env.NODE_ENV === 'development';
 
+const IVALT_FETCH_TIMEOUT_MS = parseInt(
+  process.env.IVALT_FETCH_TIMEOUT_MS || '15000',
+  10
+);
+
 if (!IVALT_API_KEY) {
   console.warn('IVALT_API_KEY not set - iVALT API calls will fail');
 }
@@ -37,14 +42,25 @@ async function ivaltRequest<T>(
     });
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': IVALT_API_KEY,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': IVALT_API_KEY,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(IVALT_FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      throw new Error(
+        `iVALT API timed out after ${IVALT_FETCH_TIMEOUT_MS}ms (${endpoint})`
+      );
+    }
+    throw error;
+  }
 
   let responseData: T;
   try {

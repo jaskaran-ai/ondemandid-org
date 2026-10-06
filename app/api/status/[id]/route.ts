@@ -2,7 +2,14 @@ import { NextResponse } from 'next/server';
 import { db, schema } from '@/lib/db';
 import { and, eq, isNull } from 'drizzle-orm';
 import { getAuthResult, mapIvaltStatus } from '@/lib/ivalt';
+import {
+  shouldPollIvalt,
+  clearIvaltPollThrottle,
+} from '@/lib/ivalt/poll-throttle';
 import { simRequests } from '@/lib/sim-store';
+
+const DEBUG_MODE =
+  process.env.DEBUG_MODE === 'true' || process.env.NODE_ENV === 'development';
 
 // Demo mode handler
 async function handleDemoMode(id: string) {
@@ -68,12 +75,13 @@ async function handleProductionMode(id: string) {
 
   const request = requests[0];
 
-  // Log status check
-  console.log('[Status API] Production mode check:', {
-    requestId: id,
-    currentStatus: request.status,
-    ivaltStatusCode: request.ivaltStatusCode,
-  });
+  if (DEBUG_MODE) {
+    console.log('[Status API] Production mode check:', {
+      requestId: id,
+      currentStatus: request.status,
+      ivaltStatusCode: request.ivaltStatusCode,
+    });
+  }
 
   // If already terminal (authenticated, failed, not_found, error), return as-is
   if (
@@ -96,17 +104,27 @@ async function handleProductionMode(id: string) {
 
   // If pending or initiated, query iVALT API for latest status
   if (request.status === 'pending' || request.status === 'initiated') {
+    if (!shouldPollIvalt(id)) {
+      return {
+        id: request.id,
+        status: request.status,
+        ivaltStatusCode: request.ivaltStatusCode || 422,
+        completedAt: undefined,
+      };
+    }
+
     try {
       const authResult = await getAuthResult({
         countryCode: request.countryCode,
         mobile: request.mobile,
       });
 
-      // Log iVALT response
-      console.log('[Status API] iVALT response:', {
-        requestId: id,
-        response: authResult,
-      });
+      if (DEBUG_MODE) {
+        console.log('[Status API] iVALT response:', {
+          requestId: id,
+          response: authResult,
+        });
+      }
 
       // Parse iVALT response - handle both old and new response formats
       let statusCode: number;
@@ -141,6 +159,7 @@ async function handleProductionMode(id: string) {
         status === 'failed' ||
         status === 'not_found'
       ) {
+        clearIvaltPollThrottle(id);
         const isSqlite = process.env.DB_TYPE === 'sqlite';
         updateData.completedAt = isSqlite
           ? new Date().toISOString()
@@ -168,7 +187,9 @@ async function handleProductionMode(id: string) {
         details,
       };
 
-      console.log('[Status API] Returning result:', result);
+      if (DEBUG_MODE) {
+        console.log('[Status API] Returning result:', result);
+      }
 
       return result;
     } catch (error) {

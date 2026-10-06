@@ -26,7 +26,7 @@ export function useAdminLoginStatus(requestId: string | null) {
       return res.data;
     },
     enabled: !!requestId,
-    refetchInterval: 2000,
+    refetchInterval: 3000,
     refetchIntervalInBackground: true,
     retry: 1,
   });

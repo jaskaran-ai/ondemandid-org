@@ -8,11 +8,21 @@ interface TemplateVariables {
   [key: string]: string | number;
 }
 
+const templateCache = new Map<string, string>();
+
+function loadTemplate(templatePath: string): string {
+  const cached = templateCache.get(templatePath);
+  if (cached) return cached;
+  const template = readFileSync(templatePath, 'utf-8');
+  templateCache.set(templatePath, template);
+  return template;
+}
+
 function renderTemplate(
   templatePath: string,
   variables: TemplateVariables
 ): string {
-  const template = readFileSync(templatePath, 'utf-8');
+  const template = loadTemplate(templatePath);
   let rendered = template;
 
   for (const [key, value] of Object.entries(variables)) {

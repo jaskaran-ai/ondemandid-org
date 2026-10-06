@@ -1,5 +1,5 @@
 import { db, schema } from '@/lib/db';
-import { and, eq, isNull, sql, desc } from 'drizzle-orm';
+import { isNull, sql, desc } from 'drizzle-orm';
 
 export interface DashboardStats {
   totalCustomers: number;
@@ -23,7 +23,13 @@ function toTimestamp(value: string | Date | number | null | undefined): number {
   if (!value) return Date.now();
   if (typeof value === 'number') return value * 1000;
   if (value instanceof Date) return value.getTime();
-  return parseInt(value) * 1000;
+  return parseInt(value, 10) * 1000;
+}
+
+function toCount(value: unknown): number {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return parseInt(value, 10) || 0;
+  return 0;
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
@@ -79,94 +85,55 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     };
   }
 
-  const [totalCustomers] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.customers)
-    .where(isNull(schema.customers.deletedAt));
-  const [activeCustomers] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.customers)
-    .where(
-      and(
-        eq(schema.customers.status, 'active'),
-        isNull(schema.customers.deletedAt)
-      )
-    );
-  const [pendingCustomers] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.customers)
-    .where(
-      and(
-        eq(schema.customers.status, 'pending'),
-        isNull(schema.customers.deletedAt)
-      )
-    );
-  const [inactiveCustomers] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.customers)
-    .where(
-      and(
-        eq(schema.customers.status, 'inactive'),
-        isNull(schema.customers.deletedAt)
-      )
-    );
-  const [totalRequests] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.ondemandRequests)
-    .where(isNull(schema.ondemandRequests.deletedAt));
-  const [authenticatedRequests] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.ondemandRequests)
-    .where(
-      and(
-        eq(schema.ondemandRequests.status, 'authenticated'),
-        isNull(schema.ondemandRequests.deletedAt)
-      )
-    );
-  const [failedRequests] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.ondemandRequests)
-    .where(
-      and(
-        eq(schema.ondemandRequests.status, 'failed'),
-        isNull(schema.ondemandRequests.deletedAt)
-      )
-    );
-  const [pendingRequests] = await db
-    .select({ count: sql<number>`count(*)::int` })
-    .from(schema.ondemandRequests)
-    .where(
-      and(
-        sql`${schema.ondemandRequests.status} IN ('pending', 'initiated')`,
-        isNull(schema.ondemandRequests.deletedAt)
-      )
-    );
+  const c = schema.customers;
+  const r = schema.ondemandRequests;
 
-  const recentRequests = await db
-    .select({
-      id: schema.ondemandRequests.id,
-      idConnection: schema.ondemandRequests.idConnection,
-      mobile: schema.ondemandRequests.mobile,
-      status: schema.ondemandRequests.status,
-      createdAt: schema.ondemandRequests.createdAt,
-    })
-    .from(schema.ondemandRequests)
-    .where(isNull(schema.ondemandRequests.deletedAt))
-    .orderBy(desc(schema.ondemandRequests.createdAt))
-    .limit(5);
+  const [customerStats, requestStats, recentRequests] = await Promise.all([
+    db
+      .select({
+        total: sql<number>`count(case when ${c.deletedAt} is null then 1 end)`,
+        active: sql<number>`count(case when ${c.status} = 'active' and ${c.deletedAt} is null then 1 end)`,
+        pending: sql<number>`count(case when ${c.status} = 'pending' and ${c.deletedAt} is null then 1 end)`,
+        inactive: sql<number>`count(case when ${c.status} = 'inactive' and ${c.deletedAt} is null then 1 end)`,
+      })
+      .from(c),
+    db
+      .select({
+        total: sql<number>`count(case when ${r.deletedAt} is null then 1 end)`,
+        authenticated: sql<number>`count(case when ${r.status} = 'authenticated' and ${r.deletedAt} is null then 1 end)`,
+        failed: sql<number>`count(case when ${r.status} = 'failed' and ${r.deletedAt} is null then 1 end)`,
+        pending: sql<number>`count(case when ${r.status} in ('pending', 'initiated') and ${r.deletedAt} is null then 1 end)`,
+      })
+      .from(r),
+    db
+      .select({
+        id: r.id,
+        idConnection: r.idConnection,
+        mobile: r.mobile,
+        status: r.status,
+        createdAt: r.createdAt,
+      })
+      .from(r)
+      .where(isNull(r.deletedAt))
+      .orderBy(desc(r.createdAt))
+      .limit(5),
+  ]);
+
+  const cs = customerStats[0];
+  const rs = requestStats[0];
 
   return {
-    totalCustomers: totalCustomers?.count ?? 0,
-    activeCustomers: activeCustomers?.count ?? 0,
-    pendingCustomers: pendingCustomers?.count ?? 0,
-    inactiveCustomers: inactiveCustomers?.count ?? 0,
-    totalRequests: totalRequests?.count ?? 0,
-    authenticatedRequests: authenticatedRequests?.count ?? 0,
-    failedRequests: failedRequests?.count ?? 0,
-    pendingRequests: pendingRequests?.count ?? 0,
-    recentRequests: recentRequests.map(r => ({
-      ...r,
-      createdAt: toTimestamp(r.createdAt),
+    totalCustomers: toCount(cs?.total),
+    activeCustomers: toCount(cs?.active),
+    pendingCustomers: toCount(cs?.pending),
+    inactiveCustomers: toCount(cs?.inactive),
+    totalRequests: toCount(rs?.total),
+    authenticatedRequests: toCount(rs?.authenticated),
+    failedRequests: toCount(rs?.failed),
+    pendingRequests: toCount(rs?.pending),
+    recentRequests: recentRequests.map(row => ({
+      ...row,
+      createdAt: toTimestamp(row.createdAt),
     })),
   };
 }

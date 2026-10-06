@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getAuthResult, mapIvaltStatus } from '@/lib/ivalt';
+import {
+  shouldPollIvalt,
+  clearIvaltPollThrottle,
+} from '@/lib/ivalt/poll-throttle';
 import { setSessionCookie } from '@/lib/admin/auth';
 
 // Demo mode store for admin login resolution
@@ -63,12 +67,19 @@ export async function GET(request: Request) {
       });
     }
 
-    // Authenticated - set session cookie
+    const attempt = loginAttempts.get(requestId);
+    if (!attempt) {
+      return NextResponse.json(
+        { error: 'Invalid or expired login session' },
+        { status: 400 }
+      );
+    }
+
     const response = NextResponse.json({
       status: 'authenticated',
       ivaltStatusCode: 200,
     });
-    setSessionCookie(response);
+    setSessionCookie(response, attempt.mobile);
     resolveAt.delete(requestId);
     loginAttempts.delete(requestId);
     return response;
@@ -81,6 +92,13 @@ export async function GET(request: Request) {
       { error: 'Invalid or expired login session' },
       { status: 400 }
     );
+  }
+
+  if (!shouldPollIvalt(requestId)) {
+    return NextResponse.json({
+      status: 'pending',
+      ivaltStatusCode: 422,
+    });
   }
 
   try {
@@ -102,12 +120,13 @@ export async function GET(request: Request) {
     const { status, ivaltStatusCode } = mapIvaltStatus(statusCode);
 
     if (status === 'authenticated') {
+      clearIvaltPollThrottle(requestId);
       loginAttempts.delete(requestId);
       const response = NextResponse.json({
         status: 'authenticated',
         ivaltStatusCode,
       });
-      setSessionCookie(response);
+      setSessionCookie(response, attempt.mobile);
       return response;
     }
 
@@ -118,7 +137,7 @@ export async function GET(request: Request) {
       });
     }
 
-    // failed or not_found - clean up
+    clearIvaltPollThrottle(requestId);
     loginAttempts.delete(requestId);
     return NextResponse.json({
       status,

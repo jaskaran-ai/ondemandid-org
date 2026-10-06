@@ -1,5 +1,15 @@
 import { db, schema } from '@/lib/db';
-import { desc, eq, isNull, sql } from 'drizzle-orm';
+import {
+  and,
+  count,
+  desc,
+  eq,
+  isNull,
+  like,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
 export interface Customer {
   id: string | number;
@@ -106,6 +116,32 @@ const demoCustomers: DemoCustomer[] = [
   },
 ];
 
+function buildCustomerWhere(
+  status?: string | null,
+  search?: string | null
+): SQL | undefined {
+  const conditions: SQL[] = [isNull(schema.customers.deletedAt)];
+
+  if (status && status !== 'all') {
+    conditions.push(eq(schema.customers.status, status));
+  }
+
+  const q = search?.trim();
+  if (q) {
+    const pattern = `%${q}%`;
+    conditions.push(
+      or(
+        like(schema.customers.companyName, pattern),
+        like(schema.customers.contactName, pattern),
+        like(schema.customers.email, pattern),
+        like(schema.customers.idConnection, pattern)
+      )!
+    );
+  }
+
+  return and(...conditions);
+}
+
 export async function getCustomers(
   status?: string | null,
   search?: string | null,
@@ -133,30 +169,27 @@ export async function getCustomers(
     }
     filtered = list;
   } else {
-    const allCustomers = await db
-      .select()
-      .from(schema.customers)
-      .where(isNull(schema.customers.deletedAt))
-      .orderBy(desc(schema.customers.createdAt));
+    const where = buildCustomerWhere(status, search);
+    const offset = (page - 1) * pageSize;
 
-    let list = allCustomers;
-    if (status && status !== 'all')
-      list = list.filter((c: any) => c.status === status);
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter(
-        (c: any) =>
-          c.companyName.toLowerCase().includes(q) ||
-          c.contactName.toLowerCase().includes(q) ||
-          c.email.toLowerCase().includes(q) ||
-          (c.idConnection || '').toLowerCase().includes(q)
-      );
-    }
+    const [countRow, rows] = await Promise.all([
+      db.select({ total: count() }).from(schema.customers).where(where),
+      db
+        .select()
+        .from(schema.customers)
+        .where(where)
+        .orderBy(desc(schema.customers.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+    ]);
 
-    filtered = list.map(c => ({
-      ...c,
-      createdAt: toTimestamp((c as any).createdAt),
-    })) as Customer[];
+    return {
+      customers: rows.map(c => ({
+        ...c,
+        createdAt: toTimestamp((c as { createdAt: unknown }).createdAt),
+      })) as Customer[],
+      total: countRow[0]?.total ?? 0,
+    };
   }
 
   const total = filtered.length;
